@@ -172,8 +172,39 @@ Docs accompany every code change: update affected README and JSDoc contracts tog
 
 ## Editing these instructions
 
-`CLAUDE.md` symlinks `AGENTS.md` at root and `packages/`; edit the real file. Keep each rule self-contained while linking high-level docs. Condense when clarity survives; raise a `verify-doc-budgets` ceiling when the required content genuinely needs more space.
+Root `CLAUDE.md` is a gstack overlay that includes `@AGENTS.md`; `packages/CLAUDE.md` still symlinks `packages/AGENTS.md`. Edit this file for standing orders. Keep each rule self-contained while linking high-level docs. Condense when clarity survives; raise a `verify-doc-budgets` ceiling when the required content genuinely needs more space.
 
 ## Vendoring policy
 
 `vendor/` packages are pinned source copies (manifest with upstream SHAs in [vendor/README.md](vendor/README.md)). Update via the sync procedure there; re-apply or retire the logged local modifications; rerun `pnpm run test && pnpm run build`.
+
+## Commit messages (MzM Bot)
+
+MzM Bot (A→C on DeepSeek Harness) uses one subject shape for every commit. Spec Kit feature directories (`specs/001-...`) and `tasks.md` T-numbers exist, but **subjects name the product/plan phase only**, never the Spec Kit feature number and never a bare `tasks.md` heading number.
+
+`Phase <plan phase> - <T-range or artifact word> - <imperative description>`
+
+```
+Phase 0 - constitution - ratify Spec Kit constitution v1.0.0 for A→C
+Phase 1 - specify - wedge multi-model bots and basic messaging
+Phase 1 - T001-T012 - wire per-bot model assignment in Electron shell
+Phase 1 - plan - seam map for agents, providers, and messaging
+Phase 1 - review - close wedge acceptance against spec
+Phase 1 - fix - unblock Spec Kit feature numbering collision
+```
+
+- **Plan phases (this project):** `Phase 0` = program foundation (constitution, tooling, tracker wiring with no feature spec yet). `Phase 1` = wedge A (per-bot models + basic bot-to-bot messaging + easy Grok-Bot-like UI). Later phases = further slices toward north star C. Do not invent parallel numbering schemes.
+- **Slot 2** is a `tasks.md` T-range (`T001-T013`) when the commit maps to task rows. Otherwise use one artifact word: `constitution`, `specify`, `clarify`, `plan`, `tasks`, `analyze`, `implement`, `review`, `docs`, or `fix`.
+- Never write a bare `tasks.md` phase/heading number in the subject. Spec Kit feature ids (`specs/001-...`) belong in the body or PR text, not slot 1.
+- Imperative mood, subject at most 72 characters, ` - ` as the separator (spaces around hyphen; no em dash). Put reasoning in the body.
+- Merge commits keep their own shape: `Merge phase 1: Wedge multi-model bots and messaging. M1 holds.`
+- One trailer only, when an agent wrote the change: `Co-Authored-By: <model name> <email>`, for example `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`. No `Claude-Session` line and no other agent attribution, whatever a harness default says.
+
+Suggested first commit for the ratified constitution:
+
+```
+Phase 0 - constitution - ratify Spec Kit constitution v1.0.0 for A→C
+
+Locks wedge-first A→C, Spec Kit delivery order, Linear-after-tasks,
+Verifier-gated Done, and seam honesty for MzM Bot.
+```
