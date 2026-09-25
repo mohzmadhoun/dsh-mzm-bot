@@ -13,7 +13,6 @@ import {
   powerMonitor,
   nativeTheme,
   protocol,
-  session,
   shell,
   type IpcMainInvokeEvent,
   type MenuItemConstructorOptions,
@@ -27,7 +26,8 @@ import { DESKTOP_IPC, SCHEME, assertDesktopSender, type DesktopUpdateState } fro
 import { formatDesktopMessage, resolveDesktopLocale } from './locale.ts'
 import { claimDesktopSingleInstance } from './single-instance.ts'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
-import { serveWebDocument, authenticateWebHost, forwardWebRequest } from './web-document.ts'
+import { serveWebDocument } from './web-document.ts'
+import type { DesktopHostHandshake } from './host-framing.ts'
 import { DesktopFatalRecovery } from './fatal-recovery.ts'
 import { DesktopUpdateJournal } from './update-journal.ts'
 import { DesktopUpdatePreparationError } from './update-error.ts'
@@ -220,8 +220,8 @@ async function main(): Promise<void> {
   }
   const appPreload = fileURLToPath(new URL('./preload-app.cjs', import.meta.url))
   const applicationUrl = `${SCHEME}://app/`
-  let hostUrl: string | undefined
-  let hostCookie: string | undefined
+  let hostHandshake: DesktopHostHandshake | undefined
+  let hostFramedBusOpen = false
   let injections: readonly unknown[] = []
   const assertProductSender = (event: IpcMainInvokeEvent): void => {
     assertDesktopSender(event, ['app'])
@@ -255,8 +255,9 @@ async function main(): Promise<void> {
     return {
       start: async () => {
         const ready = await host.start()
-        hostCookie = await authenticateWebHost(ready.url)
-        hostUrl = ready.url
+        // Gate B: framed-pipe app bus + fail-closed handshake. Loopback HTTP is not the app bus.
+        hostHandshake = ready.handshake
+        hostFramedBusOpen = ready.framedPipe.writable
         if (ready.injections === undefined) throw new Error('Desktop Host did not provide boot injections')
         injections = ready.injections
       },
@@ -402,10 +403,11 @@ async function main(): Promise<void> {
         || ['/favicon.svg', '/manifest.webmanifest'].includes(url.pathname)) {
         return serveWebDocument(request, join(resources.dsh, 'node_modules', '@deepseek-ai', 'dsh-web-frontend', 'dist'))
       }
-      if (backend.host === undefined || hostUrl === undefined || hostCookie === undefined) {
+      if (backend.host === undefined || hostHandshake === undefined || !hostFramedBusOpen) {
         return Promise.resolve(new Response(null, { status: 503 }))
       }
-      return forwardWebRequest(request, hostUrl, hostCookie)
+      // App RPC/streams/assets use the framed pipe bus (Gate B). HTTP loopback is not the app bus.
+      return Promise.resolve(new Response(null, { status: 503, statusText: 'framed-pipe app bus' }))
     }
     return Promise.resolve(new Response(null, { status: 404 }))
   })
@@ -415,8 +417,10 @@ async function main(): Promise<void> {
   ipcMain.handle(DESKTOP_IPC.boot, async (event) => {
     assertDesktopSender(event, ['app'])
     await startup
-    if (backend.host === undefined || hostUrl === undefined) throw new Error('Desktop Host is unavailable')
-    return { injections, streamBaseUrl: new URL(hostUrl).origin }
+    if (backend.host === undefined || hostHandshake === undefined || !hostFramedBusOpen) {
+      throw new Error('Desktop Host is unavailable')
+    }
+    return { injections, handshake: hostHandshake, appBus: 'framed-pipe' as const }
   })
 
   ipcMain.handle(DESKTOP_IPC.bootFailed, (event, message: unknown) => {
@@ -428,18 +432,7 @@ async function main(): Promise<void> {
     reportFatal(new Error(message))
   })
 
-  session.defaultSession.webRequest.onBeforeSendHeaders({ urls: ['ws://127.0.0.1/*'] }, (details, callback) => {
-    if (hostUrl === undefined || hostCookie === undefined || details.webContentsId !== mainWindow?.webContents.id) {
-      callback({})
-      return
-    }
-    const target = new URL(hostUrl)
-    const requested = new URL(details.url)
-    if (requested.host !== target.host) { callback({}); return }
-    const headers = Object.fromEntries(Object.entries(details.requestHeaders).map(([name, value]) => [name.toLowerCase(), value]))
-    if (headers.origin !== 'dsh-app://app') { callback({ cancel: true }); return }
-    callback({ requestHeaders: { ...headers, origin: target.origin, cookie: hostCookie, 'sec-fetch-site': 'same-origin' } })
-  })
+  // Gate B: Node IPC is lifecycle-only; app streams use framed pipes (no loopback WS app bus).
 
   // Only the main window may synchronize its palette with the native material.
   ipcMain.on(DESKTOP_IPC.nativeThemeSet, (event, source: unknown) => {

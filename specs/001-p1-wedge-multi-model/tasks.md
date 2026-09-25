@@ -30,11 +30,11 @@
 
 **Independent Test**: Run Verifier gate B only — does not require multi-model chat.
 
-- [ ] T004 [US3] Define Verifier fixture enumerating required framing handshake fields + accepted framing version in `specs/001-p1-wedge-multi-model/contracts/entry-gate-b-framing.md` (fill field list placeholders with concrete names from Host protocol)
-- [ ] T005 [US3] Implement Verifier acceptance unit proving topology lock (bundled-Node Desktop Host child + framed pipes + Node IPC lifecycle-only + `dsh-app://`) under `apps/desktop/tests/` or `specs/001-p1-wedge-multi-model/` Verifier harness path agreed by Verifier
-- [ ] T006 [US3] Implement Verifier acceptance unit for framing version + required handshake field acceptance (open B) on Desktop startup path; fail-closed on mismatch
-- [ ] T007 [US3] Wire gate B result as hard prerequisite flag/doc checkpoint so Electron/Runtime P1 feature tasks remain blocked until PASS (document in `specs/001-p1-wedge-multi-model/quickstart.md` step 0)
-- [ ] T008 [US3] Re-run gate B twice on Desktop path and record reproducible PASS evidence (SC-005)
+- [x] T004 [US3] Define Verifier fixture enumerating required framing handshake fields + accepted framing version in `specs/001-p1-wedge-multi-model/contracts/entry-gate-b-framing.md` (fill field list placeholders with concrete names from Host protocol)
+- [x] T005 [US3] Implement Verifier acceptance unit proving topology lock (bundled-Node Desktop Host child + framed pipes + Node IPC lifecycle-only + `dsh-app://`) under `apps/desktop/tests/` or `specs/001-p1-wedge-multi-model/` Verifier harness path agreed by Verifier
+- [x] T006 [US3] Implement Verifier acceptance unit for framing version + required handshake field acceptance (open B) on Desktop startup path; fail-closed on mismatch
+- [x] T007 [US3] Wire gate B result as hard prerequisite flag/doc checkpoint so Electron/Runtime P1 feature tasks remain blocked until PASS (document in `specs/001-p1-wedge-multi-model/quickstart.md` step 0)
+- [x] T008 [US3] Re-run gate B twice on Desktop path and record reproducible PASS evidence (SC-005)
 
 **Checkpoint**: Gate B PASS required before Phase 3+. If FAIL, stop fan-out.
 

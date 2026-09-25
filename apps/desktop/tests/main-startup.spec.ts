@@ -99,7 +99,18 @@ const harness = await vi.hoisted(async () => {
     readonly ready = deferred()
     readonly exited = deferred()
     readonly stopping = deferred()
-    readonly start = vi.fn(() => { hostStarted.resolve(); return this.ready.promise.then(() => ({ url: this.url, injections: [] })) })
+    readonly start = vi.fn(() => { hostStarted.resolve(); return this.ready.promise.then(() => ({
+      handshake: {
+        framingVersion: 1,
+        hostProtocolVersion: 4,
+        profileId: 'desktop',
+        dshExactVersion: '0.1.6-alpha.2',
+        clientAssetRevision: '0.1.6-alpha.2',
+        channels: { unaryRpc: 'framed', remoteStreams: 'framed', assets: 'framed' },
+      },
+      framedPipe: { writable: true, readable: true },
+      injections: [],
+    })) })
     readonly stop = vi.fn(() => {
       this.stopping.resolve()
       this.ready.reject(new Error('child stopped'))
@@ -589,29 +600,14 @@ describe('desktop main startup', () => {
     expect(harness.menu.setApplicationMenu).toHaveBeenCalledOnce()
   })
 
-  it('attaches Host socket credentials only to the owned application origin and window', async () => {
+  it('does not register loopback WebSocket credentials (Gate B framed-pipe app bus)', async () => {
     await import('../src/main.ts')
     await harness.preparing.promise
     harness.prepared.resolve()
     await harness.hostStarted.promise
     harness.hosts[0]!.ready.resolve()
     await Promise.resolve(invoke(DESKTOP_IPC.boot))
-    const handler = harness.socketHeaders.mock.calls[0]![1] as (
-      details: { url: string; webContentsId: number; requestHeaders: Record<string, string> },
-      callback: (result: unknown) => void,
-    ) => void
-    const callback = vi.fn()
-    const details = { url: 'ws://127.0.0.1:3080/api/remote.mux', webContentsId: 42, requestHeaders: { Origin: 'dsh-app://app' } }
-    handler(details, callback)
-    expect(callback).toHaveBeenLastCalledWith({ requestHeaders: {
-      origin: 'http://127.0.0.1:3080', cookie: 'test-cookie', 'sec-fetch-site': 'same-origin',
-    } })
-    handler({ ...details, requestHeaders: { Origin: 'https://other.example' } }, callback)
-    expect(callback).toHaveBeenLastCalledWith({ cancel: true })
-    handler({ ...details, webContentsId: 43 }, callback)
-    expect(callback).toHaveBeenLastCalledWith({})
-    handler({ ...details, url: 'ws://127.0.0.1:9999/api/remote.mux' }, callback)
-    expect(callback).toHaveBeenLastCalledWith({})
+    expect(harness.socketHeaders).not.toHaveBeenCalled()
   })
 
   it('registers the window-owned directory picker during startup and rejects foreign callers', async () => {
@@ -642,7 +638,7 @@ describe('desktop main startup', () => {
     await harness.hostStarted.promise
     expect(settled).toBe(false)
     harness.hosts[0]!.ready.resolve()
-    await expect(boot).resolves.toEqual({ injections: [], streamBaseUrl: 'http://127.0.0.1:3080' })
+    await expect(boot).resolves.toEqual({ injections: [], appBus: 'framed-pipe', handshake: expect.objectContaining({ profileId: 'desktop', framingVersion: 1 }) })
     expect(harness.windows[0]!.urls).toEqual(['dsh-app://app/'])
   })
 
@@ -1053,7 +1049,7 @@ describe('desktop main startup', () => {
     expect(replacement.updateTasks).not.toHaveBeenCalled()
     replacement.ready.resolve()
     await vi.waitFor(() => { expect(harness.windows[0]!.urls).toEqual(['dsh-app://app/', 'dsh-app://app/']) })
-    await expect(Promise.resolve(invoke(DESKTOP_IPC.boot))).resolves.toEqual({ injections: [], streamBaseUrl: 'http://127.0.0.1:3099' })
+    await expect(Promise.resolve(invoke(DESKTOP_IPC.boot))).resolves.toEqual({ injections: [], appBus: 'framed-pipe', handshake: expect.objectContaining({ profileId: 'desktop', framingVersion: 1 }) })
     if (mandatory) await answerMandatory('later')
     await expect(retry).resolves.toBe(false)
     expect(replacement.updateTasks.mock.calls).toEqual([['inspect']])

@@ -1,0 +1,66 @@
+{
+  "gate": "B",
+  "contract": "specs/001-p1-wedge-multi-model/contracts/entry-gate-b-framing.md",
+  "acceptedFramingVersion": 1,
+  "hostProtocolVersion": 4,
+  "hostProtocolVersionConstant": "DESKTOP_HOST_PROTOCOL_VERSION",
+  "hostProtocolVersionPath": "apps/desktop/src/host-protocol.ts",
+  "profileId": "desktop",
+  "requiredHandshakeFields": [
+    {
+      "name": "framingVersion",
+      "type": "uint",
+      "rule": "must equal acceptedFramingVersion (DESKTOP_FRAMING_VERSION)"
+    },
+    {
+      "name": "hostProtocolVersion",
+      "type": "uint",
+      "rule": "must equal DESKTOP_HOST_PROTOCOL_VERSION (=4)"
+    },
+    {
+      "name": "profileId",
+      "type": "string",
+      "rule": "must be desktop"
+    },
+    {
+      "name": "dshExactVersion",
+      "type": "string",
+      "rule": "pinned release dsh version"
+    },
+    {
+      "name": "clientAssetRevision",
+      "type": "string",
+      "rule": "version-matched client graph/assets"
+    },
+    {
+      "name": "channels",
+      "type": "object",
+      "rule": "MUST declare unaryRpc + remoteStreams + assets as framed; MUST NOT declare loopback HTTP as the app bus"
+    }
+  ],
+  "requiredFramedChannels": [
+    "unaryRpc",
+    "remoteStreams",
+    "assets"
+  ],
+  "forbiddenAppBus": [
+    "loopback-http",
+    "http",
+    "http://",
+    "ws://",
+    "ws://127.0.0.1"
+  ],
+  "lifecycleIpcAllowlist": [
+    "ready",
+    "fatal",
+    "shutdown",
+    "shutdown-complete",
+    "update-tasks"
+  ],
+  "topology": {
+    "hostChild": "bundled-node-desktop-host",
+    "appTraffic": "framed-pipes",
+    "nodeIpc": "lifecycle-only",
+    "appProtocol": "dsh-app:"
+  }
+}

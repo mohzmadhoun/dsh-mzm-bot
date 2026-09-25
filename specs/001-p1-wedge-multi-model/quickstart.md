@@ -14,12 +14,33 @@
 
 ## Validation order (mandatory)
 
-### 0) Entry gate B (blocks feature fan-out)
+### 0) Entry gate B (blocks feature fan-out) — **hard prerequisite**
 
-1. Start Desktop so Shell spawns bundled-Node Desktop Host child.
-2. Run DH Verifier framing handshake acceptance (see `contracts/entry-gate-b-framing.md`).
-3. **Expected**: PASS on framing version + required handshake fields under topology: framed pipes + Node IPC lifecycle-only + `dsh-app://`.
-4. **If FAIL**: stop — do not treat Electron/Runtime wedge feature work as unblocked.
+Gate B MUST PASS before any Electron/Runtime P1 feature fan-out (T011+). Soft claims are not enough.
+
+**Verifier commands** (run from repo root; run twice for SC-005 / T008):
+
+```bash
+pnpm exec vitest run apps/desktop/tests/gate-b-topology.spec.ts apps/desktop/tests/gate-b-handshake.spec.ts
+```
+
+Optional focused filters:
+
+```bash
+pnpm exec vitest run apps/desktop/tests/gate-b-topology.spec.ts
+pnpm exec vitest run apps/desktop/tests/gate-b-handshake.spec.ts
+```
+
+**What PASS proves** (see `contracts/entry-gate-b-framing.md` + `apps/desktop/tests/fixtures/gate-b-handshake.json`):
+
+1. Topology: bundled-Node Desktop Host child + **framed pipes** app bus + Node IPC **lifecycle-only** (`ready`|`fatal`|`shutdown`|`shutdown-complete`|`update-tasks`) + `dsh-app://`.
+2. Handshake accept: `framingVersion`, `hostProtocolVersion` (=`DESKTOP_HOST_PROTOCOL_VERSION` / 4), `profileId`=`desktop`, `dshExactVersion`, `clientAssetRevision`, `channels` with `unaryRpc`+`remoteStreams`+`assets` framed (no loopback HTTP app bus).
+3. Fail-closed on missing/type/version/profileId/forbidden channel/IPC outside allowlist.
+
+**If FAIL**: stop — do not unpark Runtime / US1 feature work.
+
+**Evidence**: `specs/001-p1-wedge-multi-model/gate-b-evidence.md` (T008 double-run).
+
 
 ### 1) Multi-model team session (SC-001 / SC-003 / SC-004)
 

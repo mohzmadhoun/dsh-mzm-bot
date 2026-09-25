@@ -2,11 +2,13 @@
 
 import { spawn, type ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
+import type { Duplex } from 'node:stream'
+import { acceptDesktopHostHandshake, type DesktopHostHandshake } from './host-framing.ts'
 import { desktopNodeEnvironment } from './node-environment.ts'
 
 interface ReadyEvent {
   readonly type: 'ready'
-  readonly url: string
+  readonly handshake: unknown
   readonly injections?: readonly unknown[] | undefined
 }
 
@@ -31,7 +33,7 @@ function isDesktopHostEvent(message: unknown): message is DesktopHostEvent {
     case 'shutdown-complete':
       return true
     case 'ready':
-      return typeof candidate.url === 'string'
+      return 'handshake' in candidate
     case 'fatal':
       return typeof candidate.message === 'string'
     case 'update-tasks':
@@ -55,9 +57,11 @@ async function exitsWithin(exit: Promise<void>, milliseconds: number): Promise<b
   }
 }
 
-/** Browser authentication URL reported by the running Web application. */
+/** Gate B ready facts: fail-closed handshake plus framed app-bus pipe. */
 export interface DesktopHostReady {
-  readonly url: string
+  readonly handshake: DesktopHostHandshake
+  /** Duplex framed app bus (stdio fd 4); not Node IPC. */
+  readonly framedPipe: Duplex
   readonly injections?: readonly unknown[] | undefined
 }
 
@@ -67,6 +71,7 @@ export class DesktopHostUncleanExitError extends Error {}
 /** One Web backend running under the Electron executable in Node mode. */
 export class DesktopHostProcess {
   private child: ChildProcess | undefined
+  private framedPipe: Duplex | undefined
   private readyResolve!: (ready: DesktopHostReady) => void
   private readyReject!: (error: Error) => void
   private readonly readyPromise = new Promise<DesktopHostReady>((resolve, reject) => {
@@ -106,8 +111,8 @@ export class DesktopHostProcess {
   ) {}
 
   /**
-   * Start this child once and await its Web application URL.
-   * @returns Ready facts supplied by the child after application startup.
+   * Start this child once and await Gate B handshake over lifecycle IPC + framed pipe.
+   * @returns Ready facts supplied by the child after fail-closed handshake acceptance.
    */
   async start(): Promise<DesktopHostReady> {
     if (this.child !== undefined) return this.readyPromise
@@ -124,9 +129,17 @@ export class DesktopHostProcess {
     ], {
       cwd: this.projectDir,
       env: desktopNodeEnvironment(this.node, undefined, this.environment),
-      stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+      // fd0 ignore, fd1 stdout, fd2 stderr, fd3 ipc lifecycle-only, fd4 framed app bus
+      stdio: ['ignore', 'pipe', 'pipe', 'ipc', 'pipe'],
     })
     this.child = child
+    const framedPipe = child.stdio[4]
+    if (framedPipe === null || typeof framedPipe === 'number' || !('write' in framedPipe)) {
+      this.fail(new Error('dsh desktop host framed pipe was not created'))
+      child.kill('SIGTERM')
+      return this.readyPromise
+    }
+    this.framedPipe = framedPipe
     child.stderr?.setEncoding('utf8')
     child.stderr?.on('data', (chunk: string) => { this.stderr = (this.stderr + chunk).slice(-MAX_HOST_DIAGNOSTIC_CHARS) })
     child.stdout?.pipe(process.stdout)
@@ -136,7 +149,15 @@ export class DesktopHostProcess {
         child.kill('SIGTERM')
         return
       }
-      if (message.type === 'ready') this.readyResolve({ url: message.url, injections: message.injections })
+      if (message.type === 'ready') {
+        try {
+          const handshake = acceptDesktopHostHandshake(message.handshake)
+          this.readyResolve({ handshake, framedPipe, injections: message.injections })
+        } catch (error) {
+          this.fail(error instanceof Error ? error : new Error(String(error)))
+          child.kill('SIGTERM')
+        }
+      }
       else if (message.type === 'shutdown-complete') {
         if (this.stopping) this.shutdownCompleted = true
         else this.fail(new Error('dsh desktop host acknowledged an unrequested shutdown'))
@@ -206,6 +227,7 @@ export class DesktopHostProcess {
       }
     }
     this.child = undefined
+    this.framedPipe = undefined
     if (requireGraceful && (!graceful || child.exitCode !== 0 || !this.shutdownCompleted)) {
       // This diagnostic reaches expandable UI; arbitrary plugin stderr can contain credentials.
       throw new DesktopHostUncleanExitError(`desktop update: Host did not complete graceful task teardown (exit ${String(child.exitCode)}, signal ${String(child.signalCode)}, shutdown acknowledged ${String(this.shutdownCompleted)}, graceful deadline exceeded ${String(!graceful)})`)

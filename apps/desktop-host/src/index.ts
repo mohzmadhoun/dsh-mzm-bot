@@ -1,5 +1,7 @@
-/** Launch the Desktop profile through the Web application and report its URL to Electron. */
+/** Launch the Desktop profile and complete Gate B framed-pipe handshake with Electron. */
 
+import { readFileSync } from 'node:fs'
+import { Socket } from 'node:net'
 import { delimiter, join } from 'node:path'
 import { loadLayeredEnv, loadProfileDirectory } from '@deepseek-ai/dsh-app-boot'
 import { runProfile } from '@deepseek-ai/dsh/profile-boot'
@@ -9,6 +11,35 @@ import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import * as desktopOffice from './office.ts'
 
 import { installDesktopUpdateTaskControl } from './update-tasks.ts'
+
+
+/** Must match apps/desktop/src/host-framing.ts Gate B constants. */
+const DESKTOP_FRAMING_VERSION = 1
+const DESKTOP_HOST_PROTOCOL_VERSION = 4
+const DESKTOP_PROFILE_ID = 'desktop'
+
+function readPackageVersion(packageJsonPath: string): string {
+  const manifest = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as { version?: unknown }
+  if (typeof manifest.version !== 'string' || manifest.version.length === 0) {
+    throw new Error(`desktop host: missing version in ${packageJsonPath}`)
+  }
+  return manifest.version
+}
+
+function openFramedAppPipe(): Socket {
+  // stdio fd 4 is the Shell↔Host framed app bus (lifecycle stays on Node IPC).
+  const framed = new Socket({ fd: 4, readable: true, writable: true })
+  framed.unref()
+  return framed
+}
+
+function writeFramedJson(stream: Socket, value: unknown): void {
+  const body = Buffer.from(JSON.stringify(value), 'utf8')
+  const frame = Buffer.allocUnsafe(4 + body.byteLength)
+  frame.writeUInt32BE(body.byteLength, 0)
+  body.copy(frame, 4)
+  stream.write(frame)
+}
 
 async function main(): Promise<void> {
   const runtimeDir = process.argv[2] as string
@@ -70,8 +101,29 @@ async function main(): Promise<void> {
     source: process.argv[4] ?? join(runtimeDir, '..', 'runtime', 'primary-runtime'),
     root: join(resolveDshHome(), 'dsh-runtimes', 'dsh-primary-runtime'),
   })
-  const url = ctx.connection.authenticatedUrl(`http://127.0.0.1:${String(ctx.webServer.port)}`)
-  if (process.connected) process.send?.({ type: 'ready', url, injections: ctx.webServer.collectIndexInjections() }, (error) => { if (error !== null) console.error(error) })
+  const dshExactVersion = readPackageVersion(installAnchor)
+  const clientAssetRevision = dshExactVersion
+  const handshake = {
+    framingVersion: DESKTOP_FRAMING_VERSION,
+    hostProtocolVersion: DESKTOP_HOST_PROTOCOL_VERSION,
+    profileId: DESKTOP_PROFILE_ID,
+    dshExactVersion,
+    clientAssetRevision,
+    channels: {
+      unaryRpc: 'framed' as const,
+      remoteStreams: 'framed' as const,
+      assets: 'framed' as const,
+    },
+  }
+  const framedPipe = openFramedAppPipe()
+  writeFramedJson(framedPipe, { type: 'bus-open', channels: handshake.channels })
+  // Web server may still boot for Host-side composition, but Gate B app bus is framed pipes only.
+  if (process.connected) {
+    process.send?.(
+      { type: 'ready', handshake, injections: ctx.webServer.collectIndexInjections() },
+      (error) => { if (error !== null) console.error(error) },
+    )
+  }
 }
 
 if (import.meta.main) {
