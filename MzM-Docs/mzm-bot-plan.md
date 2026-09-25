@@ -1,8 +1,8 @@
-# MzM Bot — Final Project Plan
+﻿# MzM Bot — Final Project Plan
 
 | Field | Value |
 |-------|-------|
-| **Status** | DRAFT v0.3 — Spec four-edit patch 2026-09-25; auth locked in-app; **pending DH Spec LGTM** |
+| **Status** | **ACCEPTED v0.3 — Spec LGTM 2026-09-25**; auth locked in-app; P1 `/speckit-specify` in flight |
 | **Date** | 2026-09-25 |
 | **Owners** | DH Product Owner Assistant (draft) · DH Spec (requirements review) · DH Lead (gates) · DH Architect (seams) |
 | **Repo** | `C:\Users\Mohammed\Desktop\DSH - MzM Bot` (`mohzmadhoun/dsh-mzm-bot`) |
@@ -61,7 +61,7 @@ Each phase = one Spec Kit loop: `specify → clarify → plan → tasks → anal
 | **In** | Spec Kit constitution v1.0.0; Spec Kit + gstack init; A→C design doc; AGENTS.md commit format; Grok inventory (`mzm-bot-initial-plan.md`) |
 | **Out** | Feature ship; Linear board fill |
 | **Exit** | Constitution ratified; tooling present; this plan accepted |
-| **Status** | Done except acceptance of this plan |
+| **Status** | Done — plan ACCEPTED v0.3 |
 
 ### P1 — Wedge A (next)
 
@@ -220,3 +220,9 @@ Frozen 2026-09-25 in channel **MzM Bot Plan** by DH Spec / DH Lead / DH Architec
 - Auth primary **LOCKED**: in-app (Mohammed 2026-09-25)
 - Verifier every phase
 - v0.3 Spec four-edit patch: P2 exit (no “anti-job visibility”); §9 + P1 In basic create + chat progress/final; P6/P7 Verifier-provable exits
+
+
+## Changelog
+
+- **v0.3 ACCEPTED** (2026-09-25): DH Spec LGTM. Gate clear for /speckit-specify P1 only.
+
