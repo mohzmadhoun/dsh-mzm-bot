@@ -11,6 +11,7 @@ import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import * as desktopOffice from './office.ts'
 
 import { installDesktopUpdateTaskControl } from './update-tasks.ts'
+import DesktopBotBindings from './bot-bindings.ts'
 
 
 /** Must match apps/desktop/src/host-framing.ts Gate B constants. */
@@ -101,6 +102,9 @@ async function main(): Promise<void> {
     source: process.argv[4] ?? join(runtimeDir, '..', 'runtime', 'primary-runtime'),
     root: join(resolveDshHome(), 'dsh-runtimes', 'dsh-primary-runtime'),
   })
+  // US1 T011/T012: per-bot model binding + isolated scopes (chat-only; no Shell/box/MCP).
+  // Inject waits for Host tools + systemPrompt from the Desktop profile composition.
+  await ctx.plugin(DesktopBotBindings)
   const dshExactVersion = readPackageVersion(installAnchor)
   const clientAssetRevision = dshExactVersion
   const handshake = {

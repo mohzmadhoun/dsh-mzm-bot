@@ -44,6 +44,14 @@ pnpm exec vitest run apps/desktop/tests/gate-b-handshake.spec.ts
 
 ### 1) Multi-model team session (SC-001 / SC-003 / SC-004)
 
+**Host unit (T011 / T012 — Runtime first land):**
+
+```bash
+pnpm exec vitest run apps/desktop-host/tests/bot-bindings.spec.ts
+```
+
+Proves: per-bot model/provider binding via isolate + `installModelSelection` → Host `ctx.llm` routing; draft not usable until bound; sibling bots do not share scope-local tool privilege (`contracts/per-bot-model-binding.md`). Evidence: `specs/001-p1-wedge-multi-model/us1-t011-t012-evidence.md`.
+
 1. Authenticate providers via **in-app** path (not env as primary).
 2. Create ≥2 bots; assign **different** models/providers.
 3. Run one real chat work session that uses both bots; confirm UI shows **progress** and a **final result**.

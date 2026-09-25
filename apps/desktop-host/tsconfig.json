@@ -14,6 +14,10 @@
     { "path": "../../packages/skill/skill-office" },
     { "path": "../../packages/util/home-paths" },
     { "path": "../../packages/core/tools" },
+    { "path": "../../packages/util/brand" },
+    { "path": "../../packages/core/scope" },
+    { "path": "../../packages/core/system-prompt" },
+    { "path": "../../packages/llm/llm" },
     {
       "path": "../cli"
     },

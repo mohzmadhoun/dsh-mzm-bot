@@ -53,8 +53,8 @@
 
 ### Implementation (after gate B)
 
-- [ ] T011 [P] [US1] Host: expose per-bot model/provider binding via isolate / `ctx.llm` seam in Runtime Host composition (`apps/desktop-host/` + `packages/core` / `packages/llm` as applicable) — constraint: required for usable bot
-- [ ] T012 [P] [US1] Host: ensure agent scopes isolated (no shared tool privilege across bots) in Host scope wiring (`packages/core` scope/agent seams)
+- [x] T011 [P] [US1] Host: expose per-bot model/provider binding via isolate / `ctx.llm` seam in Runtime Host composition (`apps/desktop-host/` + `packages/core` / `packages/llm` as applicable) — constraint: required for usable bot
+- [x] T012 [P] [US1] Host: ensure agent scopes isolated (no shared tool privilege across bots) in Host scope wiring (`packages/core` scope/agent seams)
 - [ ] T013 [US1] Electron: in-app auth primary path (Electron main → OS secure store / Host credential seam) for provider credentials; env/key files dev/CI only (`apps/desktop/src/`, `packages/credentials/`)
 - [ ] T014 [US1] Electron: basic user-initiated bot create UI sufficient for ≥2 bots with model/provider assignment (`apps/desktop/` renderer/client surfaces)
 - [ ] T015 [US1] Runtime+Electron: chat session shows progress updates and delivers final result (FR-008) — chat chrome beyond that out of scope
