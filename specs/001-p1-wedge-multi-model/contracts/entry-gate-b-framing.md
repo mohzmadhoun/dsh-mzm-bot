@@ -2,7 +2,8 @@
 
 **Feature**: `001-p1-wedge-multi-model`  
 **Owns acceptance**: DH Verifier  
-**Related**: FR-001, FR-002, SC-005, User Story 3
+**Related**: FR-001, FR-002, SC-005, User Story 3  
+**Binding**: Architect + PO freeze 2026-09-25 (handshake fields + lifecycle IPC allowlist)
 
 ## Purpose
 
@@ -19,36 +20,42 @@ Verifier MUST observe exactly:
 
 Any alternate topology is out of scope and MUST fail this gate.
 
+## Lifecycle IPC allowlist (MUST)
+
+Node IPC MAY carry only these lifecycle signals:
+
+- `ready`
+- `fatal`
+- `shutdown`
+- `shutdown-complete`
+- `update-tasks`
+
+Node IPC MUST NOT carry chat, RPC, or any framed app bus substitute. Violation → gate **fail**.
+
 ## Handshake acceptance
 
 | Check | Requirement |
 |-------|-------------|
-| Framing version | Present and accepted by both sides under locked topology (`framingVersion`, uint) |
-| Required handshake fields | Present, well-typed, accepted — **required set** (Architect freeze 2026-09-25; fills T004 placeholders): |
-| | • `framingVersion` (uint) |
-| | • `hostProtocolVersion` (= `DESKTOP_HOST_PROTOCOL_VERSION`, currently **4**) |
-| | • `profileId` = `desktop` |
-| | • `dshExactVersion` |
-| | • `clientAssetRevision` |
-| | • `channels` MUST include `unaryRpc` + `remoteStreams` + `assets`; MUST NOT use loopback HTTP as app bus |
-| Fail-closed | Version mismatch, missing required field, wrong `profileId`, or forbidden channel/bus → gate **fail**; feature fan-out remains blocked |
+| Framing version | Present and accepted by both sides under locked topology |
+| Required handshake fields | Present, well-typed, accepted — normative list below |
+| Fail-closed | Missing field, type mismatch, version mismatch, wrong `profileId`, forbidden channel/bus, or lifecycle IPC outside allowlist → gate **fail**; feature fan-out remains blocked |
 | Reproducible | Same Desktop app path can re-run and get the same pass/fail (not a one-off manual claim) |
 
-### Required handshake field list (normative)
+### Required handshake field list (normative — T004)
 
 Verifier fixture for T004 MUST enumerate exactly:
 
-1. `framingVersion` (uint)
-2. `hostProtocolVersion` (= `DESKTOP_HOST_PROTOCOL_VERSION`, currently 4)
-3. `profileId` = `desktop`
-4. `dshExactVersion`
-5. `clientAssetRevision`
-6. `channels` includes `unaryRpc` + `remoteStreams` + `assets`; must **not** use loopback HTTP as the app bus
+1. **`framingVersion`** (uint) — framed-pipe protocol generation; both sides must match
+2. **`hostProtocolVersion`** — must equal `DESKTOP_HOST_PROTOCOL_VERSION` (= **4** today in `apps/desktop/src/host-protocol.ts`)
+3. **`profileId`** — must be `desktop`
+4. **`dshExactVersion`** (string) — pinned release dsh version
+5. **`clientAssetRevision`** (string) — version-matched client graph/assets
+6. **`channels`** — MUST declare `unaryRpc` + `remoteStreams` + `assets` (framed); MUST NOT declare loopback HTTP as the app bus
 
 ## Pass / Fail
 
-- **PASS**: Verifier records pass for framing version + handshake fields under locked topology.
-- **FAIL**: Any topology deviation, version mismatch, or missing required field.
+- **PASS**: Verifier records pass for framing version + handshake fields under locked topology and lifecycle IPC allowlist.
+- **FAIL**: Any topology deviation, version/field mismatch, missing required field, forbidden channel/bus, or lifecycle IPC outside the allowlist.
 
 ## Non-goals
 
