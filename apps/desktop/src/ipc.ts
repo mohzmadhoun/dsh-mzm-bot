@@ -13,6 +13,18 @@ export const DESKTOP_IPC = {
   nativeThemeSet: 'dsh-desktop:native-theme-set',
   windowsAppearance: 'dsh-desktop:windows-appearance',
   windowsMenu: 'dsh-desktop:windows-menu',
+  /** T013 / MOH-17: set provider secret in OS-backed store (main only). */
+  credentialsSet: 'dsh-desktop:credentials-set',
+  /** T013 / MOH-17: remove provider secret from OS-backed store. */
+  credentialsUnset: 'dsh-desktop:credentials-unset',
+  /** T013 / MOH-17: presence-only credential metadata (never raw secrets). */
+  credentialsList: 'dsh-desktop:credentials-list',
+  /** T014 / MOH-19: create a bot with model/provider assignment intent. */
+  botsCreate: 'dsh-desktop:bots-create',
+  /** T014 / MOH-19: list Shell-persisted bots. */
+  botsList: 'dsh-desktop:bots-list',
+  /** T014 / MOH-19: open the Shell bot-create window. */
+  botsOpenCreate: 'dsh-desktop:bots-open-create',
 } as const
 
 /** Desktop release update state rendered by desktop-owned UI. */
@@ -57,6 +69,46 @@ export interface DshDesktopProductApi {
     status(): Promise<DesktopUpdatePresentation>
     open(): Promise<void>
     subscribe(listener: (state: DesktopUpdatePresentation) => void): () => void
+  }
+}
+
+/** Presence-only credential row; raw secrets never cross this boundary (T013 / MOH-17). */
+export interface DesktopCredentialPresence {
+  readonly provider: 'gpt' | 'claude' | 'grok' | 'deepseek'
+  readonly ref: string
+  readonly configured: boolean
+  readonly source: 'secure-store' | 'env' | 'absent'
+  readonly writable: boolean
+}
+
+/** Bot create / list shapes for the Shell create UI (T014 / MOH-19). */
+export interface DesktopBotCreateRequest {
+  readonly displayName: string
+  readonly provider: 'gpt' | 'claude' | 'grok' | 'deepseek'
+  readonly modelId: string
+}
+
+export interface DesktopBotSummary {
+  readonly id: string
+  readonly displayName: string
+  readonly provider: 'gpt' | 'claude' | 'grok' | 'deepseek'
+  readonly modelId: string
+  readonly credentialRef: string
+  readonly status: 'draft' | 'ready' | 'error'
+  readonly createdAt: string
+}
+
+/** Narrow preload surface for in-app auth + bot create (no raw secret readout). */
+export interface DshDesktopWedgeApi {
+  readonly credentials: {
+    list(): Promise<readonly DesktopCredentialPresence[]>
+    set(provider: DesktopCredentialPresence['provider'], secret: string): Promise<void>
+    unset(provider: DesktopCredentialPresence['provider']): Promise<void>
+  }
+  readonly bots: {
+    list(): Promise<readonly DesktopBotSummary[]>
+    create(input: DesktopBotCreateRequest): Promise<DesktopBotSummary>
+    openCreate(): Promise<void>
   }
 }
 

@@ -16,6 +16,15 @@ export type {
   ApiKeyRecord, CredentialInfo, CredentialKey, CredentialRecord, CredentialRef, GrantRecord,
 } from './types.ts'
 
+export {
+  WEDGE_PROVIDER_CREDENTIAL_REF_NAMES,
+  WEDGE_PROVIDER_IDS,
+  credentialRefForProvider,
+  isWedgeProviderId,
+  providerForCredentialRefName,
+  type WedgeProviderId,
+} from './provider-refs.ts'
+
 const REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 
 /** Both halves of a {@link CredentialKey}; the `/` between them is what keeps it out of {@link REF_PATTERN}. */

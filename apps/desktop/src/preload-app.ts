@@ -1,7 +1,13 @@
-/** Origin-scoped boot, native directory selection, and update presentation with native confirmation actions. */
+/** Origin-scoped boot, native directory selection, update presentation, and wedge auth/bot create APIs. */
 
 import { contextBridge, ipcRenderer } from 'electron'
-import { DESKTOP_IPC, SCHEME, type DshDesktopProductApi, type DesktopUpdatePresentation } from './ipc.ts'
+import {
+  DESKTOP_IPC,
+  SCHEME,
+  type DshDesktopProductApi,
+  type DshDesktopWedgeApi,
+  type DesktopUpdatePresentation,
+} from './ipc.ts'
 import { markDocumentPlatform } from './preload-platform.ts'
 import { syncNativeTheme } from './preload-theme.ts'
 import { syncWindowsAppearance } from './preload-windows.ts'
@@ -19,7 +25,23 @@ const product: DshDesktopProductApi = {
   },
 }
 
-if (location.protocol === `${SCHEME}:` && location.hostname === 'app') {
+const wedge: DshDesktopWedgeApi = {
+  credentials: {
+    list: () => ipcRenderer.invoke(DESKTOP_IPC.credentialsList) as ReturnType<DshDesktopWedgeApi['credentials']['list']>,
+    set: (provider, secret) => ipcRenderer.invoke(DESKTOP_IPC.credentialsSet, provider, secret) as Promise<void>,
+    unset: provider => ipcRenderer.invoke(DESKTOP_IPC.credentialsUnset, provider) as Promise<void>,
+  },
+  bots: {
+    list: () => ipcRenderer.invoke(DESKTOP_IPC.botsList) as ReturnType<DshDesktopWedgeApi['bots']['list']>,
+    create: input => ipcRenderer.invoke(DESKTOP_IPC.botsCreate, input) as ReturnType<DshDesktopWedgeApi['bots']['create']>,
+    openCreate: () => ipcRenderer.invoke(DESKTOP_IPC.botsOpenCreate) as Promise<void>,
+  },
+}
+
+const onApp = location.protocol === `${SCHEME}:` && location.hostname === 'app'
+const onShell = location.protocol === `${SCHEME}:` && location.hostname === 'shell'
+
+if (onApp) {
   syncWindowsAppearance()
   contextBridge.exposeInMainWorld('__DSH_DIRECTORY_PICKER__', {
     pick: () => ipcRenderer.invoke(DESKTOP_IPC.directoryPick) as Promise<string | null>,
@@ -33,4 +55,8 @@ if (location.protocol === `${SCHEME}:` && location.hostname === 'app') {
 markDocumentPlatform()
 syncNativeTheme()
 // Main-process IPC also verifies the owning window and top frame.
-contextBridge.exposeInMainWorld('dshDesktop', location.protocol === `${SCHEME}:` && location.hostname === 'app' ? product : { protocolVersion: 1 })
+contextBridge.exposeInMainWorld('dshDesktop', onApp ? product : { protocolVersion: 1 })
+// Narrow wedge surface: app + shell documents only; never exposes raw secret readout.
+if (onApp || onShell) {
+  contextBridge.exposeInMainWorld('dshDesktopWedge', wedge)
+}

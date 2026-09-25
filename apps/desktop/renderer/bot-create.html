@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'self'">
+    <title>Create bot</title>
+    <link rel="stylesheet" href="bot-create.css">
+  </head>
+  <body>
+    <main>
+      <h1>Create bot</h1>
+      <p class="hint">Assign a model/provider per bot. Credentials stay in the OS-backed store — never in chat dumps.</p>
+      <form id="create-form">
+        <label>Display name
+          <input id="display-name" name="displayName" type="text" maxlength="80" required placeholder="Research bot">
+        </label>
+        <label>Provider
+          <select id="provider" name="provider" required>
+            <option value="gpt">GPT</option>
+            <option value="claude">Claude</option>
+            <option value="grok">Grok</option>
+            <option value="deepseek">DeepSeek</option>
+          </select>
+        </label>
+        <label>Model id
+          <input id="model-id" name="modelId" type="text" maxlength="120" required placeholder="gpt-4.1">
+        </label>
+        <label class="optional">Provider API key (optional if already configured)
+          <input id="api-key" name="apiKey" type="password" autocomplete="off" placeholder="Stored via OS secure store">
+        </label>
+        <p id="credential-status" class="status" aria-live="polite"></p>
+        <p id="form-error" class="error" hidden></p>
+        <button type="submit" id="create">Create bot</button>
+      </form>
+      <section>
+        <h2>Bots</h2>
+        <ul id="bot-list"></ul>
+      </section>
+    </main>
+    <script src="bot-create.js"></script>
+  </body>
+</html>

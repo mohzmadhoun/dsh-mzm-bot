@@ -4,7 +4,7 @@ import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
+import { safeStorage,
   app,
   BrowserWindow,
   dialog,
@@ -23,6 +23,11 @@ import { DesktopHostProcess, DesktopHostUncleanExitError } from './host-process.
 import { installDesktopDirectoryPicker } from './directory-picker.ts'
 import { DesktopBackendController } from './backend-controller.ts'
 import { DESKTOP_IPC, SCHEME, assertDesktopSender, type DesktopUpdateState } from './ipc.ts'
+import { BotRegistry, botRegistryPath } from './bot-registry.ts'
+import { SecureCredentialStore, secureCredentialStorePath } from './secure-credential-store.ts'
+import { desktopRendererRoot, serveShellStatic } from './shell-static.ts'
+import { installDesktopWedgeIpc } from './wedge-ipc.ts'
+import { credentialRefNameForProvider, type WedgeProviderId } from './wedge-providers.ts'
 import { formatDesktopMessage, resolveDesktopLocale } from './locale.ts'
 import { claimDesktopSingleInstance } from './single-instance.ts'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
@@ -189,6 +194,22 @@ async function main(): Promise<void> {
   const paths = resolveDesktopPaths()
   const development = !app.isPackaged
   const activeProject = paths.profile
+  const credentialStore = new SecureCredentialStore(
+    secureCredentialStorePath(activeProject),
+    safeStorage,
+    process.env,
+  )
+  await credentialStore.load()
+  const hostEnvironment: NodeJS.ProcessEnv = await credentialStore.mergeIntoEnv(process.env)
+  const botRegistry = new BotRegistry(
+    botRegistryPath(activeProject),
+    async (provider: WedgeProviderId) => {
+      const presence = await credentialStore.describe(credentialRefNameForProvider(provider))
+      return presence.configured
+    },
+  )
+  await botRegistry.load()
+
   const manager = new DesktopProjectManager(paths, resources)
   let quitting = false
   let startup: Promise<void> | undefined
@@ -248,7 +269,7 @@ async function main(): Promise<void> {
   const backend = new DesktopBackendController((onFailure) => {
     const hostInspectPort = developmentHostInspectPort(development)
     const host = new DesktopHostProcess(resources.node, resources.dsh, activeProject,
-      hostInspectPort, process.env, onFailure,
+      hostInspectPort, hostEnvironment, onFailure,
       development ? join(app.getAppPath(), '.desktop-build', 'targets', `${process.platform === 'darwin' ? 'mac' : 'win'}-${process.arch}`, 'runtime', 'primary-runtime')
         : join(process.resourcesPath, 'runtime', 'primary-runtime'),
       development ? 'link' : 'runtime', resources)
@@ -396,8 +417,13 @@ async function main(): Promise<void> {
     return updates.install(version)
   }
 
+  const rendererRoot = desktopRendererRoot(app.getAppPath())
   protocol.handle(SCHEME, (request) => {
     const url = new URL(request.url)
+    if (url.hostname === 'shell') {
+      // Gate B: local shell documents only — not Host HTTP / loopback app bus.
+      return serveShellStatic(request, rendererRoot)
+    }
     if (url.hostname === 'app') {
       if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname.startsWith('/assets/')
         || ['/favicon.svg', '/manifest.webmanifest'].includes(url.pathname)) {
@@ -413,6 +439,16 @@ async function main(): Promise<void> {
   })
 
   installDesktopDirectoryPicker(() => mainWindow)
+
+  // T013/MOH-17 + T014/MOH-19: in-app auth + bot create via narrow preload/IPC (no raw secret readout).
+  // Host receives merged env at next spawn; mid-session rotation is Runtime/Host credential seam follow-up.
+  installDesktopWedgeIpc(
+    credentialStore,
+    botRegistry,
+    appPreload,
+    () => mainWindow,
+  )
+
 
   ipcMain.handle(DESKTOP_IPC.boot, async (event) => {
     assertDesktopSender(event, ['app'])
