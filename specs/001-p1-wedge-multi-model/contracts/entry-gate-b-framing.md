@@ -23,10 +23,27 @@ Any alternate topology is out of scope and MUST fail this gate.
 
 | Check | Requirement |
 |-------|-------------|
-| Framing version | Present and accepted by both sides under locked topology |
-| Required handshake fields | Present, well-typed, accepted (enumerate in Verifier fixture as implementation proceeds; contract requires non-empty required set) |
-| Fail-closed | Version mismatch or missing required fields → gate **fail**; feature fan-out remains blocked |
+| Framing version | Present and accepted by both sides under locked topology (`framingVersion`, uint) |
+| Required handshake fields | Present, well-typed, accepted — **required set** (Architect freeze 2026-09-25; fills T004 placeholders): |
+| | • `framingVersion` (uint) |
+| | • `hostProtocolVersion` (= `DESKTOP_HOST_PROTOCOL_VERSION`, currently **4**) |
+| | • `profileId` = `desktop` |
+| | • `dshExactVersion` |
+| | • `clientAssetRevision` |
+| | • `channels` MUST include `unaryRpc` + `remoteStreams` + `assets`; MUST NOT use loopback HTTP as app bus |
+| Fail-closed | Version mismatch, missing required field, wrong `profileId`, or forbidden channel/bus → gate **fail**; feature fan-out remains blocked |
 | Reproducible | Same Desktop app path can re-run and get the same pass/fail (not a one-off manual claim) |
+
+### Required handshake field list (normative)
+
+Verifier fixture for T004 MUST enumerate exactly:
+
+1. `framingVersion` (uint)
+2. `hostProtocolVersion` (= `DESKTOP_HOST_PROTOCOL_VERSION`, currently 4)
+3. `profileId` = `desktop`
+4. `dshExactVersion`
+5. `clientAssetRevision`
+6. `channels` includes `unaryRpc` + `remoteStreams` + `assets`; must **not** use loopback HTTP as the app bus
 
 ## Pass / Fail
 
