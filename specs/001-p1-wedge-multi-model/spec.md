@@ -1,12 +1,19 @@
-# Feature Specification: Phase 1 Wedge A — multi-model bots + Host 1:1 messaging
+﻿# Feature Specification: Phase 1 Wedge A — multi-model bots + Host 1:1 messaging
 
 **Feature Branch**: `001-p1-wedge-multi-model`
 
 **Created**: 2026-09-25
 
-**Status**: Draft
+**Status**: Clarified — ready for plan (2026-09-25)
 
 **Input**: User description: "Phase 1 Wedge A — multi-model bots + Host 1:1 messaging: create ≥2 bots with different models/providers (in-app auth), async 1:1 bot→bot via Host mailbox, Shell↔Host framing handshake entry gate B before Electron/Runtime fan-out; chat-only Host; Windows-first wedge to stop Alt-Tab for model reasons."
+
+
+## Clarifications
+
+### Session 2026-09-25
+
+- Clarify scan: no critical ambiguities; proceeding with plan defaults from mzm-bot-plan.md v0.3 + Architect seam freeze.
 
 ## User Scenarios & Testing *(mandatory)*
 
