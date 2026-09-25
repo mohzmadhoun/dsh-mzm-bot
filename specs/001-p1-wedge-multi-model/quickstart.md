@@ -52,6 +52,14 @@ pnpm exec vitest run apps/desktop-host/tests/bot-bindings.spec.ts
 
 Proves: per-bot model/provider binding via isolate + `installModelSelection` → Host `ctx.llm` routing; draft not usable until bound; sibling bots do not share scope-local tool privilege (`contracts/per-bot-model-binding.md`). Evidence: `specs/001-p1-wedge-multi-model/us1-t011-t012-evidence.md`.
 
+**Host unit (T016 / T017 — chat-only + trust floor):**
+
+```bash
+pnpm exec vitest run apps/desktop-host/tests/chat-only-trust-floor.spec.ts
+```
+
+Proves: chat-only required services (`sessions`/`llm`/`tools`) without shell/MCP backends; profile-row audit + disable patch; `tools.guard` denies external send/post (web/shell/MCP); session surfaces strip secrets and keep `credentialRef` only (FR-003/FR-009). Evidence: `specs/001-p1-wedge-multi-model/us1-t016-t017-evidence.md`.
+
 1. Authenticate providers via **in-app** path (not env as primary).
 2. Create ≥2 bots; assign **different** models/providers.
 3. Run one real chat work session that uses both bots; confirm UI shows **progress** and a **final result**.

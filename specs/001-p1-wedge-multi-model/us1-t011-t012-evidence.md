@@ -28,7 +28,7 @@ pnpm exec vitest run apps/desktop-host/tests/bot-bindings.spec.ts
 ## Out of this land (still open)
 
 - T013+ Electron in-app auth / bot create UI / chat progress chrome
-- T016 explicit chat-only composition audit vs full desktop profile rows
+- T016/T017 chat-only + trust floor → see `us1-t016-t017-evidence.md`
 - Framed `unaryRpc` past-503 for `dsh-app://` non-static paths (not required to prove T011/T012)
 - US2 mailbox (T023+)
 

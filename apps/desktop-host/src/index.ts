@@ -12,6 +12,7 @@ import * as desktopOffice from './office.ts'
 
 import { installDesktopUpdateTaskControl } from './update-tasks.ts'
 import DesktopBotBindings from './bot-bindings.ts'
+import DesktopChatOnlyTrustFloor from './chat-only-trust-floor.ts'
 
 
 /** Must match apps/desktop/src/host-framing.ts Gate B constants. */
@@ -105,6 +106,10 @@ async function main(): Promise<void> {
   // US1 T011/T012: per-bot model binding + isolated scopes (chat-only; no Shell/box/MCP).
   // Inject waits for Host tools + systemPrompt from the Desktop profile composition.
   await ctx.plugin(DesktopBotBindings)
+  // US1 T016/T017: chat-only trust floor — required services assert, external send/post
+  // denied via tools.guard, session surfaces sanitized. strictBackends false until T018
+  // disables leftover base-bundle shell/web/MCP profile rows; capability gate is still live.
+  await ctx.plugin(DesktopChatOnlyTrustFloor, { strictBackends: false })
   const dshExactVersion = readPackageVersion(installAnchor)
   const clientAssetRevision = dshExactVersion
   const handshake = {

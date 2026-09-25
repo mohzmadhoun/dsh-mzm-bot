@@ -58,8 +58,8 @@
 - [ ] T013 [US1] Electron: in-app auth primary path (Electron main → OS secure store / Host credential seam) for provider credentials; env/key files dev/CI only (`apps/desktop/src/`, `packages/credentials/`)
 - [ ] T014 [US1] Electron: basic user-initiated bot create UI sufficient for ≥2 bots with model/provider assignment (`apps/desktop/` renderer/client surfaces)
 - [ ] T015 [US1] Runtime+Electron: chat session shows progress updates and delivers final result (FR-008) — chat chrome beyond that out of scope
-- [ ] T016 [US1] Enforce chat-only Host composition (sessions + llm adapters + tools registry **without** local shell/box backends); MCP disabled (FR-003/FR-009)
-- [ ] T017 [US1] Enforce tools cannot send/post externally; sessions must not dump secrets (trust floor)
+- [x] T016 [US1] Enforce chat-only Host composition (sessions + llm adapters + tools registry **without** local shell/box backends); MCP disabled (FR-003/FR-009)
+- [x] T017 [US1] Enforce tools cannot send/post externally; sessions must not dump secrets (trust floor)
 - [ ] T018 [US1] Single Desktop Host + `$DSH_HOME/profiles/desktop` profile wiring for wedge (FR-010)
 - [ ] T019 [US1] Provider configuration path supports GPT / Claude / Grok / DeepSeek as available (FR-011)
 - [ ] T020 [US1] DH Verifier: re-run Electron Desktop multi-model session acceptance path (SC-004 / FR-012)
